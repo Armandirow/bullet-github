@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { BulletColor as Color, type Bullet } from '@/types/bullet.types'
+import { BulletColor as Color, type Bullet, BulletColor } from '@/types/bullet.types'
 import HitboxComponent from './HitboxComponent.vue'
 import { useSightStore } from '@/stores/sight'
 import BulletColumns from './BulletColumns.vue'
 import { getColSpan, getColStart, getRowSpan, getRowStart } from '@/utils/getCssClass'
-import { computed, inject, ref } from 'vue'
+import { computed, inject, ref, watch } from 'vue'
 import { useElementBounding, useMouseInElement } from '@vueuse/core'
 import BulletSvg from '@/components/svg/BulletSvg.vue'
 import { usePatternStore } from '@/stores/pattern'
@@ -12,6 +12,7 @@ import PatternElementSvg from '@/components/svg/PatternElementSvg.vue'
 import { NOTYF_INJECTION_KEY } from '@/main'
 import { useActionStore } from '@/stores/action'
 import ActionBulletSelectSvg from '@/components/svg/ActionBulletSelectSvg.vue'
+import { ActionName } from '@/types/action.types'
 
 // Grid configuration constants
 const GRID_CONFIG = {
@@ -102,14 +103,12 @@ const onPatternClick = () => {
   if (isPatternOnCooldown.value) return
 
   try {
-    console.log(mouseColStart.value, mouseRowStart.value)
     patternStore.playPatternSelected({
       posCol: mouseColStart.value,
       posRow: mouseRowStart.value - 1
     })
     patternError.value = false
   } catch (error) {
-    console.warn(`${error}`)
     notyf?.open({ message: `${error}`, type: 'warn' })
     patternError.value = true
     setTimeout(() => {
@@ -124,11 +123,51 @@ const onPatternClick = () => {
 }
 
 const onBulletPressed = (bullet: Bullet) => {
-  if (actionStore.actionSelected === undefined) {
-    return
+  try {
+    sightStore.selectBullet(bullet)
+  } catch (error) {
+    notyf?.error({ message: `${error}` })
   }
-  sightStore.selectBullet(bullet)
 }
+
+const handlePreviewPositionClick = async (position: { column: BulletColor; row: number }) => {
+  if (!actionStore.actionSelected || !sightStore.selectedBullet) return
+
+  const action = actionStore.actionSelected
+  const bullet = sightStore.selectedBullet
+
+  try {
+    actionStore.consumeActionPoints(action.apCost)
+    sightStore.selectedBullet = undefined
+    sightStore.hidePreviewPositions()
+    await sightStore.moveBulletAnimated(bullet, position.column, position.row)
+    actionStore.unselectAction()
+  } catch (error) {
+    notyf?.error({ message: `${error}` })
+  }
+}
+
+// Watch for bullet selection and show preview for MOVE_DOWN_ANY
+watch(
+  () => sightStore.selectedBullet,
+  (bullet) => {
+    if (bullet && actionStore.actionSelected?.name === ActionName.MOVE_DOWN_ANY) {
+      sightStore.showPreviewPositions(bullet)
+    } else {
+      sightStore.hidePreviewPositions()
+    }
+  }
+)
+
+// Watch for action selection and hide preview if action changes
+watch(
+  () => actionStore.actionSelected,
+  (action) => {
+    if (action?.name !== ActionName.MOVE_DOWN_ANY) {
+      sightStore.hidePreviewPositions()
+    }
+  }
+)
 </script>
 
 <template>
@@ -154,8 +193,10 @@ const onBulletPressed = (bullet: Bullet) => {
                 getColStart(bullet.column),
                 getRowStart(bullet.row),
                 'duration-500 ease-in-out',
-                bullet.startAnimation ? 'transition-all' : 'transition-none',
-                sightStore.selectedBullet?.id === bullet.id ? GRID_CLASSES.selectedBullet : '',
+                bullet.startAnimation ? 'transition-all animate-bullet-move' : 'transition-none',
+                sightStore.selectedBullet?.id === bullet.id
+                  ? `${GRID_CLASSES.selectedBullet} animate-bullet-bounce`
+                  : '',
                 bullet.isDestroying ? 'animate-destroy' : ''
               ]"
               :style="{
@@ -172,9 +213,43 @@ const onBulletPressed = (bullet: Bullet) => {
               ></BulletSvg>
               <div class="absolute top-0 w-full h-full flex justify-center items-center">
                 <ActionBulletSelectSvg
-                  class="fill-white"
                   v-if="sightStore.selectedBullet?.id === bullet.id"
                 ></ActionBulletSelectSvg>
+              </div>
+            </div>
+          </template>
+        </div>
+        <div
+          :class="[
+            GRID_CLASSES.container,
+            'absolute top-0 left-0',
+            sightStore.isShowingPreview ? 'z-10' : '-z-10'
+          ]"
+        >
+          <!-- Preview positions for MOVE_DOWN_ANY -->
+          <template v-if="sightStore.isShowingPreview && sightStore.selectedBullet">
+            <div
+              v-for="position in sightStore.previewPositions"
+              :key="`preview-${position.column}-${position.row}`"
+              :class="[
+                'relative w-full h-full z-20',
+                getColStart(position.column),
+                getRowStart(position.row),
+                'cursor-pointer'
+              ]"
+              @click="handlePreviewPositionClick(position)"
+            >
+              <!-- Glassy bullet preview -->
+              <div class="w-[full] h-full flex items-center justify-center relative">
+                <!-- <div
+                  class="rounded-full bg-white bg-opacity-40 filter-blur-sm absolute w-[70%] h-[60%] "
+                ></div> -->
+                <BulletSvg
+                  class="w-[1/4] h-[1/4] animate-bullet-preview"
+                  :number="sightStore.selectedBullet.number"
+                  :color="sightStore.selectedBullet.color"
+                  :is-stared="sightStore.selectedBullet.isStared"
+                ></BulletSvg>
               </div>
             </div>
           </template>

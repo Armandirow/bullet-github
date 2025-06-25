@@ -35,23 +35,30 @@ export const useActionStore = defineStore('action', () => {
     actionSelected.value = undefined
   }
 
-  const playActionSelected = ({ posCol, posRow }: { posCol: number; posRow: number }) => {
-    if (!actionSelected.value) {
-      throw new Error(`You need to select an action before trying to play it`)
-    }
-    if (actionPoints.value < actionSelected.value.apCost) {
-      throw new Error("You don't have the AP needed")
-    }
-    // const sightStore = useSightStore()
-    // sightStore.playAction({ action: actionSelected.value, posCol, posRow })
+  // const playActionSelected = ({ posCol, posRow }: { posCol: number; posRow: number }) => {
+  //   if (!actionSelected.value) {
+  //     throw new Error(`You need to select an action before trying to play it`)
+  //   }
+  //   if (actionPoints.value < actionSelected.value.apCost) {
+  //     throw new Error("You don't have the AP needed")
+  //   }
+  //   // const sightStore = useSightStore()
+  //   // sightStore.playAction({ action: actionSelected.value, posCol, posRow })
 
-    unselectAction()
-  }
+  //   unselectAction()
+  // }
 
   const activateStarActions = () => {
     for (const action of starActions.value) {
       action.callback()
     }
+  }
+
+  const consumeActionPoints = (cost: number) => {
+    if (actionPoints.value < cost) {
+      throw new Error("You don't have the AP needed")
+    }
+    actionPoints.value -= cost
   }
 
   const initialize = (hero: Heroine) => {
@@ -63,12 +70,14 @@ export const useActionStore = defineStore('action', () => {
   return {
     actions,
     actionSelected,
+    actionPoints,
     simpleActions,
     starActions,
     initialize,
     activateStarActions,
     selectAction,
     unselectAction,
-    playActionSelected
+    // playActionSelected,
+    consumeActionPoints
   }
 })

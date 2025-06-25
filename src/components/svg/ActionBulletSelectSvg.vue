@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { useMouseInElement } from '@vueuse/core'
-import { ref, inject } from 'vue'
+import { ref, inject, computed } from 'vue'
 import { useActionStore } from '@/stores/action'
 import { useSightStore } from '@/stores/sight'
 import { ActionName } from '@/types/action.types'
@@ -20,6 +20,85 @@ const { isOutside: isOutsideDown } = useMouseInElement(downArrowEl)
 const actionStore = useActionStore()
 const sightStore = useSightStore()
 const notyf = inject(NOTYF_INJECTION_KEY)
+
+// Computed properties to determine which arrows to show
+const showLeftArrow = computed(() => {
+  if (!actionStore.actionSelected || !sightStore.selectedBullet) return false
+
+  const action = actionStore.actionSelected.name
+  const bullet = sightStore.selectedBullet
+  const currentPosition = getPositionByColumnColor(bullet.column)
+
+  switch (action) {
+    case ActionName.MOVE_LEFT_RIGHT_DOWN_ONE:
+      return currentPosition > 1
+    case ActionName.MOVE_UP_ONE:
+    case ActionName.MOVE_DOWN_ANY:
+      return false
+    default:
+      return false
+  }
+})
+
+const showRightArrow = computed(() => {
+  if (!actionStore.actionSelected || !sightStore.selectedBullet) return false
+
+  const action = actionStore.actionSelected.name
+  const bullet = sightStore.selectedBullet
+  const currentPosition = getPositionByColumnColor(bullet.column)
+
+  switch (action) {
+    case ActionName.MOVE_LEFT_RIGHT_DOWN_ONE:
+      return currentPosition < 5
+    case ActionName.MOVE_UP_ONE:
+    case ActionName.MOVE_DOWN_ANY:
+      return false
+    default:
+      return false
+  }
+})
+
+const showUpArrow = computed(() => {
+  if (!actionStore.actionSelected || !sightStore.selectedBullet) return false
+
+  const action = actionStore.actionSelected.name
+  const bullet = sightStore.selectedBullet
+
+  switch (action) {
+    case ActionName.MOVE_LEFT_RIGHT_DOWN_ONE:
+      return false
+    case ActionName.MOVE_UP_ONE:
+      return bullet.row > 1
+    case ActionName.MOVE_DOWN_ANY:
+      return false
+    default:
+      return false
+  }
+})
+
+const showDownArrow = computed(() => {
+  if (!actionStore.actionSelected || !sightStore.selectedBullet) return false
+
+  const action = actionStore.actionSelected.name
+  const bullet = sightStore.selectedBullet
+
+  switch (action) {
+    case ActionName.MOVE_LEFT_RIGHT_DOWN_ONE:
+      return bullet.row < 7
+    case ActionName.MOVE_UP_ONE:
+      return false
+    case ActionName.MOVE_DOWN_ANY:
+      // MOVE_DOWN_ANY uses preview positions instead of arrows
+      return false
+    default:
+      return false
+  }
+})
+
+const isSimpleMoveAvailable = computed(() => {
+  if (!actionStore.actionSelected || !sightStore.selectedBullet) return false
+  return showLeftArrow.value || showRightArrow.value || showUpArrow.value || showDownArrow.value
+})
 
 // Helper function to get column color by position
 const getColumnColorByPosition = (position: number): BulletColor => {
@@ -57,7 +136,7 @@ const getPositionByColumnColor = (color: BulletColor): number => {
   }
 }
 
-const handleArrowClick = (direction: 'left' | 'right' | 'up' | 'down') => {
+const handleArrowClick = async (direction: 'left' | 'right' | 'up' | 'down') => {
   if (!actionStore.actionSelected) {
     notyf?.error({ message: 'No action selected' })
     return
@@ -71,13 +150,13 @@ const handleArrowClick = (direction: 'left' | 'right' | 'up' | 'down') => {
   try {
     switch (actionStore.actionSelected.name) {
       case ActionName.MOVE_LEFT_RIGHT_DOWN_ONE:
-        handleMoveLeftRightDownOne(direction)
+        await handleMoveLeftRightDownOne(direction)
         break
       case ActionName.MOVE_UP_ONE:
-        handleMoveUpOne(direction)
+        await handleMoveUpOne(direction)
         break
       case ActionName.MOVE_DOWN_ANY:
-        handleMoveDownAny(direction)
+        // MOVE_DOWN_ANY uses preview positions, not arrows
         break
       default:
         notyf?.error({ message: 'This action cannot be used with arrows' })
@@ -87,7 +166,8 @@ const handleArrowClick = (direction: 'left' | 'right' | 'up' | 'down') => {
   }
 }
 
-const handleMoveLeftRightDownOne = (direction: 'left' | 'right' | 'up' | 'down') => {
+const handleMoveLeftRightDownOne = async (direction: 'left' | 'right' | 'up' | 'down') => {
+  const action = actionStore.actionSelected!
   const bullet = sightStore.selectedBullet!
   const currentPosition = getPositionByColumnColor(bullet.column)
 
@@ -95,7 +175,16 @@ const handleMoveLeftRightDownOne = (direction: 'left' | 'right' | 'up' | 'down')
     case 'left':
       if (currentPosition > 1) {
         const newColumn = getColumnColorByPosition(currentPosition - 1)
-        moveBullet(bullet, newColumn, bullet.row)
+        if (sightStore.isPositionAvailable({ column: newColumn, row: bullet.row })) {
+          // We need to consume action points before moving the bullet
+          // because the moveBulletAnimated will wait for the animation to finish
+          // and we want to animate the action at the same time
+          actionStore.consumeActionPoints(action.apCost)
+          sightStore.selectedBullet = undefined
+          await moveBullet(bullet, newColumn, bullet.row)
+        } else {
+          throw new Error('Cannot move left: target position is occupied')
+        }
       } else {
         throw new Error('Cannot move left: already at leftmost column')
       }
@@ -103,14 +192,32 @@ const handleMoveLeftRightDownOne = (direction: 'left' | 'right' | 'up' | 'down')
     case 'right':
       if (currentPosition < 5) {
         const newColumn = getColumnColorByPosition(currentPosition + 1)
-        moveBullet(bullet, newColumn, bullet.row)
+        if (sightStore.isPositionAvailable({ column: newColumn, row: bullet.row })) {
+          // We need to consume action points before moving the bullet
+          // because the moveBulletAnimated will wait for the animation to finish
+          // and we want to animate the action at the same time
+          actionStore.consumeActionPoints(action.apCost)
+          sightStore.selectedBullet = undefined
+          await moveBullet(bullet, newColumn, bullet.row)
+        } else {
+          throw new Error('Cannot move right: target position is occupied')
+        }
       } else {
         throw new Error('Cannot move right: already at rightmost column')
       }
       break
     case 'down':
       if (bullet.row < 7) {
-        moveBullet(bullet, bullet.column, bullet.row + 1)
+        if (sightStore.isPositionAvailable({ column: bullet.column, row: bullet.row + 1 })) {
+          // We need to consume action points before moving the bullet
+          // because the moveBulletAnimated will wait for the animation to finish
+          // and we want to animate the action at the same time
+          actionStore.consumeActionPoints(action.apCost)
+          sightStore.selectedBullet = undefined
+          await moveBullet(bullet, bullet.column, bullet.row + 1)
+        } else {
+          throw new Error('Cannot move down: target position is occupied')
+        }
       } else {
         throw new Error('Cannot move down: already at bottom row')
       }
@@ -122,15 +229,25 @@ const handleMoveLeftRightDownOne = (direction: 'left' | 'right' | 'up' | 'down')
   actionStore.unselectAction()
 }
 
-const handleMoveUpOne = (direction: 'left' | 'right' | 'up' | 'down') => {
+const handleMoveUpOne = async (direction: 'left' | 'right' | 'up' | 'down') => {
   const bullet = sightStore.selectedBullet!
+  const action = actionStore.actionSelected!
 
   if (direction !== 'up') {
     throw new Error('This action only allows upward movement')
   }
 
   if (bullet.row > 1) {
-    moveBullet(bullet, bullet.column, bullet.row - 1)
+    if (sightStore.isPositionAvailable({ column: bullet.column, row: bullet.row - 1 })) {
+      // We need to consume action points before moving the bullet
+      // because the moveBulletAnimated will wait for the animation to finish
+      // and we want to animate the action at the same time
+      actionStore.consumeActionPoints(action.apCost)
+      sightStore.selectedBullet = undefined
+      await moveBullet(bullet, bullet.column, bullet.row - 1)
+    } else {
+      throw new Error('Cannot move up: target position is occupied')
+    }
   } else {
     throw new Error('Cannot move up: already at top row')
   }
@@ -138,63 +255,26 @@ const handleMoveUpOne = (direction: 'left' | 'right' | 'up' | 'down') => {
   actionStore.unselectAction()
 }
 
-const handleMoveDownAny = (direction: 'left' | 'right' | 'up' | 'down') => {
-  const bullet = sightStore.selectedBullet!
-
-  if (direction !== 'down') {
-    throw new Error('This action only allows downward movement')
-  }
-
-  // Find the lowest available position in the same column
-  let targetRow = bullet.row
-  for (let row = bullet.row + 1; row <= 7; row++) {
-    if (!sightStore.sightBoard[bullet.column][row]) {
-      targetRow = row
-    } else {
-      break
-    }
-  }
-
-  if (targetRow > bullet.row) {
-    moveBullet(bullet, bullet.column, targetRow)
-  } else {
-    throw new Error('No available space below the bullet')
-  }
-
-  actionStore.unselectAction()
-}
-
-const moveBullet = (bullet: Bullet, newColumn: BulletColor, newRow: number) => {
-  // Check if target position is occupied
-  if (sightStore.sightBoard[newColumn][newRow]) {
-    throw new Error('Target position is occupied')
-  }
-
-  // Remove from current position
-  sightStore.sightBoard[bullet.column][bullet.row] = undefined
-
-  // Update bullet position
-  bullet.column = newColumn
-  bullet.row = newRow
-
-  // Place in new position
-  sightStore.sightBoard[newColumn][newRow] = bullet
-
-  // Clear selection
-  sightStore.selectedBullet = undefined
+const moveBullet = async (bullet: Bullet, newColumn: BulletColor, newRow: number) => {
+  await sightStore.moveBulletAnimated(bullet, newColumn, newRow)
 }
 </script>
 
 <template>
-  <div class="absolute bg-black w-[90%] h-[80%] opacity-20 rounded-full"></div>
+  <div
+    v-if="isSimpleMoveAvailable"
+    class="absolute bg-black w-[90%] h-[80%] opacity-20 rounded-full"
+  ></div>
   <div class="fill-white z-10">
     <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
       <!-- <circle cx="32" cy="32" r="16" /> -->
       <path
+        v-if="isSimpleMoveAvailable"
         d="M48 32C48 40.8366 40.8366 48 32 48C23.1634 48 16 40.8366 16 32C16 23.1634 23.1634 16 32 16C40.8366 16 48 23.1634 48 32ZM19.2 32C19.2 39.0692 24.9308 44.8 32 44.8C39.0692 44.8 44.8 39.0692 44.8 32C44.8 24.9308 39.0692 19.2 32 19.2C24.9308 19.2 19.2 24.9308 19.2 32Z"
       />
       <!-- right -->
       <path
+        v-if="showRightArrow"
         ref="rightArrowEl"
         d="M63.0134 31.2168C63.5177 31.6172 63.5177 32.3828 63.0134 32.7832L53.6218 40.2388C52.9664 40.7591 52 40.2924 52 39.4556L52 24.5444C52 23.7076 52.9664 23.2409 53.6218 23.7612L63.0134 31.2168Z"
         transform-origin="64 32"
@@ -213,6 +293,7 @@ const moveBullet = (bullet: Bullet, newColumn: BulletColor, newRow: number) => {
       </path>
       <!-- left -->
       <path
+        v-if="showLeftArrow"
         ref="leftArrowEl"
         d="M0.986589 31.2168C0.482265 31.6172 0.482265 32.3828 0.98659 32.7832L10.3782 40.2388C11.0336 40.7591 12 40.2924 12 39.4556L12 24.5444C12 23.7076 11.0336 23.2409 10.3782 23.7612L0.986589 31.2168Z"
         transform-origin="0 32"
@@ -232,6 +313,7 @@ const moveBullet = (bullet: Bullet, newColumn: BulletColor, newRow: number) => {
 
       <!-- up -->
       <path
+        v-if="showUpArrow"
         ref="upArrowEl"
         d="M31.2168 0.986589C31.6172 0.482264 32.3828 0.482265 32.7832 0.986589L40.2388 10.3782C40.7591 11.0336 40.2924 12 39.4556 12L24.5444 12C23.7076 12 23.2409 11.0336 23.7612 10.3782L31.2168 0.986589Z"
         transform-origin="32 0"
@@ -250,6 +332,7 @@ const moveBullet = (bullet: Bullet, newColumn: BulletColor, newRow: number) => {
       </path>
       <!-- down -->
       <path
+        v-if="showDownArrow"
         ref="downArrowEl"
         d="M32.7832 63.0134C32.3828 63.5177 31.6172 63.5177 31.2168 63.0134L23.7612 53.6218C23.2409 52.9664 23.7076 52 24.5444 52H39.4556C40.2924 52 40.7591 52.9664 40.2388 53.6218L32.7832 63.0134Z"
         transform-origin="32 64"

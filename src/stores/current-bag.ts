@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { useBag } from '@/composables/bag'
 import { onMounted, ref } from 'vue'
 import { useCenterBagStore } from './center-bag'
+import { useActionStore } from './action'
 
 const BULLET_START_NUMBER = 10
 const INTENSITY_START = 4
@@ -22,6 +23,9 @@ export const useCurrentBagStore = defineStore('current-bag', () => {
   const refill = () => {
     pickRandomBullets(intensity.value)
     intensity.value += 1
+    // Reset AP to maximum when bag is refilled
+    const actionStore = useActionStore()
+    actionStore.actionPoints = 7
   }
 
   onMounted(() => {
