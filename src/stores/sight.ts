@@ -22,6 +22,8 @@ export const useSightStore = defineStore('sight', () => {
   const currentBagStore = useCurrentBagStore()
   const selectedBullet = ref<Bullet | undefined>()
   const isFiring = ref(false)
+  const previewPositions = ref<Array<{ column: Color; row: number }>>([])
+  const isShowingPreview = ref(false)
 
   const bulletsOnBoard = computed(() => {
     return Object.values(sightBoard.value).flatMap((column) =>
@@ -41,7 +43,6 @@ export const useSightStore = defineStore('sight', () => {
     rowNumber: number
     numberOfMoves: number
   }): [number, boolean] => {
-    console.log(`next  [${rowNumber}] needToMove: ${numberOfMoves}\n${bulletColumn[rowNumber]}`)
     if (numberOfMoves === 0) {
       return [rowNumber, true]
     }
@@ -165,6 +166,28 @@ export const useSightStore = defineStore('sight', () => {
     return true
   }
 
+  const showPreviewPositions = (bullet: Bullet) => {
+    const positions: Array<{ column: Color; row: number }> = []
+
+    // Find all available positions below the bullet in the same column
+    for (let row = bullet.row + 1; row <= 6; row++) {
+      if (isPositionAvailable({ column: bullet.column, row })) {
+        positions.push({ column: bullet.column, row })
+      } else {
+        // Stop when we hit a bullet
+        break
+      }
+    }
+
+    previewPositions.value = positions
+    isShowingPreview.value = true
+  }
+
+  const hidePreviewPositions = () => {
+    previewPositions.value = []
+    isShowingPreview.value = false
+  }
+
   const moveBulletAnimated = async (bullet: Bullet, newColumn: Color, newRow: number) => {
     if (isFiring.value) {
       throw new Error('Please wait for the current bullet to settle')
@@ -237,7 +260,6 @@ export const useSightStore = defineStore('sight', () => {
       for (const [patternColIndex, patternElement] of patternRow.entries()) {
         const sightElement =
           sightBoard.value[getColumnColor(posCol + patternColIndex)][posRow + patternRowIndex]
-        console.log({ pattern: { ...patternElement }, sightEl: { ...sightElement } })
         switch (patternElement.type) {
           case PatternElementType.BLANK:
             // do nothing
@@ -310,6 +332,10 @@ export const useSightStore = defineStore('sight', () => {
     moveBulletAnimated,
     isPositionAvailable,
     startAnimation,
-    stopAnimation
+    stopAnimation,
+    previewPositions,
+    isShowingPreview,
+    showPreviewPositions,
+    hidePreviewPositions
   }
 })

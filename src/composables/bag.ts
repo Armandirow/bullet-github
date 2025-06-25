@@ -11,13 +11,11 @@ export const useBag = () => {
   }
 
   const pickRandomBullet = () => {
-    console.log('pick a random bullet')
     if (remainingBullets.value === 0) {
       throw new Error('No bullets remaining in this bag')
     }
     shuffle()
     const [pickedBullet, ...newRemainingBullets] = bag.value.bullets
-    console.log(newRemainingBullets.length)
     bag.value.bullets = [...newRemainingBullets]
     return pickedBullet
   }

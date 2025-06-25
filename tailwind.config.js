@@ -18,7 +18,8 @@ export default {
       animation: {
         destroy: 'destroy 0.5s ease-in-out forwards',
         'bullet-move': 'bullet-move 0.5s ease-out forwards',
-        'bullet-bounce': 'bullet-bounce 0.3s ease-out'
+        'bullet-bounce': 'bullet-bounce 0.3s ease-out infinite',
+        'bullet-preview': 'bullet-preview 1s ease-out infinite'
       },
       keyframes: {
         destroy: {
@@ -58,6 +59,20 @@ export default {
           },
           '100%': {
             transform: 'scale(1)'
+          }
+        },
+        'bullet-preview': {
+          '0%': {
+            opacity: '0.3',
+            scale: '1'
+          },
+          '50%': {
+            opacity: '0.5',
+            scale: '1.05'
+          },
+          '100%': {
+            opacity: '0.3',
+            scale: '1'
           }
         }
       },

@@ -88,21 +88,16 @@ const showDownArrow = computed(() => {
     case ActionName.MOVE_UP_ONE:
       return false
     case ActionName.MOVE_DOWN_ANY:
-      // Check if there's available space below
-      for (let row = bullet.row + 1; row <= 7; row++) {
-        if (!sightStore.sightBoard[bullet.column][row]) {
-          return true
-        }
-      }
+      // MOVE_DOWN_ANY uses preview positions instead of arrows
       return false
     default:
       return false
   }
 })
 
-const noValidMoves = computed(() => {
+const isSimpleMoveAvailable = computed(() => {
   if (!actionStore.actionSelected || !sightStore.selectedBullet) return false
-  return !showLeftArrow.value && !showRightArrow.value && !showUpArrow.value && !showDownArrow.value
+  return showLeftArrow.value || showRightArrow.value || showUpArrow.value || showDownArrow.value
 })
 
 // Helper function to get column color by position
@@ -161,7 +156,7 @@ const handleArrowClick = async (direction: 'left' | 'right' | 'up' | 'down') => 
         await handleMoveUpOne(direction)
         break
       case ActionName.MOVE_DOWN_ANY:
-        await handleMoveDownAny(direction)
+        // MOVE_DOWN_ANY uses preview positions, not arrows
         break
       default:
         notyf?.error({ message: 'This action cannot be used with arrows' })
@@ -260,53 +255,21 @@ const handleMoveUpOne = async (direction: 'left' | 'right' | 'up' | 'down') => {
   actionStore.unselectAction()
 }
 
-const handleMoveDownAny = async (direction: 'left' | 'right' | 'up' | 'down') => {
-  const bullet = sightStore.selectedBullet!
-  const action = actionStore.actionSelected!
-
-  if (direction !== 'down') {
-    throw new Error('This action only allows downward movement')
-  }
-
-  // Find the lowest available position in the same column
-  let targetRow = bullet.row
-  for (let row = bullet.row + 1; row <= 7; row++) {
-    if (!sightStore.sightBoard[bullet.column][row]) {
-      targetRow = row
-    } else {
-      break
-    }
-  }
-
-  if (targetRow > bullet.row) {
-    if (sightStore.isPositionAvailable({ column: bullet.column, row: targetRow })) {
-      // We need to consume action points before moving the bullet
-      // because the moveBulletAnimated will wait for the animation to finish
-      // and we want to animate the action at the same time
-      actionStore.consumeActionPoints(action.apCost)
-      sightStore.selectedBullet = undefined
-      await moveBullet(bullet, bullet.column, targetRow)
-    } else {
-      throw new Error('Cannot move down: target position is occupied')
-    }
-  } else {
-    throw new Error('No available space below the bullet')
-  }
-
-  actionStore.unselectAction()
-}
-
 const moveBullet = async (bullet: Bullet, newColumn: BulletColor, newRow: number) => {
   await sightStore.moveBulletAnimated(bullet, newColumn, newRow)
 }
 </script>
 
 <template>
-  <div class="absolute bg-black w-[90%] h-[80%] opacity-20 rounded-full"></div>
+  <div
+    v-if="isSimpleMoveAvailable"
+    class="absolute bg-black w-[90%] h-[80%] opacity-20 rounded-full"
+  ></div>
   <div class="fill-white z-10">
     <svg width="64" height="64" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
       <!-- <circle cx="32" cy="32" r="16" /> -->
       <path
+        v-if="isSimpleMoveAvailable"
         d="M48 32C48 40.8366 40.8366 48 32 48C23.1634 48 16 40.8366 16 32C16 23.1634 23.1634 16 32 16C40.8366 16 48 23.1634 48 32ZM19.2 32C19.2 39.0692 24.9308 44.8 32 44.8C39.0692 44.8 44.8 39.0692 44.8 32C44.8 24.9308 39.0692 19.2 32 19.2C24.9308 19.2 19.2 24.9308 19.2 32Z"
       />
       <!-- right -->
@@ -387,12 +350,5 @@ const moveBullet = async (bullet: Bullet, newColumn: BulletColor, newRow: number
         />
       </path>
     </svg>
-  </div>
-  <!-- No valid moves message -->
-  <div
-    v-if="noValidMoves"
-    class="absolute inset-0 flex items-center justify-center text-white text-xs font-medium bg-black bg-opacity-50 rounded-full"
-  >
-    No moves
   </div>
 </template>

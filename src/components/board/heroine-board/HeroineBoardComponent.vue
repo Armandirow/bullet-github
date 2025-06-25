@@ -24,7 +24,6 @@ const pickOne = async () => {
   try {
     await sightStore.pickOne()
   } catch (error) {
-    console.warn(`${error}`)
     notyf?.error({ message: `${error}` })
   }
 }
