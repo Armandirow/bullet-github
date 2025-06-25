@@ -180,9 +180,16 @@ const handleMoveLeftRightDownOne = async (direction: 'left' | 'right' | 'up' | '
     case 'left':
       if (currentPosition > 1) {
         const newColumn = getColumnColorByPosition(currentPosition - 1)
-        actionStore.consumeActionPoints(action.apCost)
-        sightStore.selectedBullet = undefined
-        await moveBullet(bullet, newColumn, bullet.row)
+        if (sightStore.isPositionAvailable({ column: newColumn, row: bullet.row })) {
+          // We need to consume action points before moving the bullet
+          // because the moveBulletAnimated will wait for the animation to finish
+          // and we want to animate the action at the same time
+          actionStore.consumeActionPoints(action.apCost)
+          sightStore.selectedBullet = undefined
+          await moveBullet(bullet, newColumn, bullet.row)
+        } else {
+          throw new Error('Cannot move left: target position is occupied')
+        }
       } else {
         throw new Error('Cannot move left: already at leftmost column')
       }
@@ -190,18 +197,32 @@ const handleMoveLeftRightDownOne = async (direction: 'left' | 'right' | 'up' | '
     case 'right':
       if (currentPosition < 5) {
         const newColumn = getColumnColorByPosition(currentPosition + 1)
-        actionStore.consumeActionPoints(action.apCost)
-        sightStore.selectedBullet = undefined
-        await moveBullet(bullet, newColumn, bullet.row)
+        if (sightStore.isPositionAvailable({ column: newColumn, row: bullet.row })) {
+          // We need to consume action points before moving the bullet
+          // because the moveBulletAnimated will wait for the animation to finish
+          // and we want to animate the action at the same time
+          actionStore.consumeActionPoints(action.apCost)
+          sightStore.selectedBullet = undefined
+          await moveBullet(bullet, newColumn, bullet.row)
+        } else {
+          throw new Error('Cannot move right: target position is occupied')
+        }
       } else {
         throw new Error('Cannot move right: already at rightmost column')
       }
       break
     case 'down':
       if (bullet.row < 7) {
-        actionStore.consumeActionPoints(action.apCost)
-        sightStore.selectedBullet = undefined
-        await moveBullet(bullet, bullet.column, bullet.row + 1)
+        if (sightStore.isPositionAvailable({ column: bullet.column, row: bullet.row + 1 })) {
+          // We need to consume action points before moving the bullet
+          // because the moveBulletAnimated will wait for the animation to finish
+          // and we want to animate the action at the same time
+          actionStore.consumeActionPoints(action.apCost)
+          sightStore.selectedBullet = undefined
+          await moveBullet(bullet, bullet.column, bullet.row + 1)
+        } else {
+          throw new Error('Cannot move down: target position is occupied')
+        }
       } else {
         throw new Error('Cannot move down: already at bottom row')
       }
@@ -222,9 +243,16 @@ const handleMoveUpOne = async (direction: 'left' | 'right' | 'up' | 'down') => {
   }
 
   if (bullet.row > 1) {
-    actionStore.consumeActionPoints(action.apCost)
-    sightStore.selectedBullet = undefined
-    await moveBullet(bullet, bullet.column, bullet.row - 1)
+    if (sightStore.isPositionAvailable({ column: bullet.column, row: bullet.row - 1 })) {
+      // We need to consume action points before moving the bullet
+      // because the moveBulletAnimated will wait for the animation to finish
+      // and we want to animate the action at the same time
+      actionStore.consumeActionPoints(action.apCost)
+      sightStore.selectedBullet = undefined
+      await moveBullet(bullet, bullet.column, bullet.row - 1)
+    } else {
+      throw new Error('Cannot move up: target position is occupied')
+    }
   } else {
     throw new Error('Cannot move up: already at top row')
   }
@@ -251,9 +279,16 @@ const handleMoveDownAny = async (direction: 'left' | 'right' | 'up' | 'down') =>
   }
 
   if (targetRow > bullet.row) {
-    actionStore.consumeActionPoints(action.apCost)
-    sightStore.selectedBullet = undefined
-    await moveBullet(bullet, bullet.column, targetRow)
+    if (sightStore.isPositionAvailable({ column: bullet.column, row: targetRow })) {
+      // We need to consume action points before moving the bullet
+      // because the moveBulletAnimated will wait for the animation to finish
+      // and we want to animate the action at the same time
+      actionStore.consumeActionPoints(action.apCost)
+      sightStore.selectedBullet = undefined
+      await moveBullet(bullet, bullet.column, targetRow)
+    } else {
+      throw new Error('Cannot move down: target position is occupied')
+    }
   } else {
     throw new Error('No available space below the bullet')
   }

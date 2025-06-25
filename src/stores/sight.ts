@@ -151,6 +151,20 @@ export const useSightStore = defineStore('sight', () => {
     selectedBullet.value = bullet
   }
 
+  const isPositionAvailable = ({ column, row }: { column: Color; row: number }): boolean => {
+    // Check if target position is occupied
+    if (sightBoard.value[column][row]) {
+      return false
+    }
+
+    // Check if we're currently firing
+    if (isFiring.value) {
+      return false
+    }
+
+    return true
+  }
+
   const moveBulletAnimated = async (bullet: Bullet, newColumn: Color, newRow: number) => {
     if (isFiring.value) {
       throw new Error('Please wait for the current bullet to settle')
@@ -294,6 +308,7 @@ export const useSightStore = defineStore('sight', () => {
     selectedBullet,
     isFiring,
     moveBulletAnimated,
+    isPositionAvailable,
     startAnimation,
     stopAnimation
   }
