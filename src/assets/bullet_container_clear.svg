@@ -1,0 +1,22 @@
+<svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g clip-path="url(#clip0_2_2)">
+<path fill-rule="evenodd" clip-rule="evenodd" d="M32 64C49.6731 64 64 49.6731 64 32C64 14.3269 49.6731 1.52588e-05 32 1.52588e-05C14.3269 1.52588e-05 0 14.3269 0 32C0 49.6731 14.3269 64 32 64ZM32 60C47.464 60 60 47.464 60 32C60 16.536 47.464 4.00001 32 4.00001C16.536 4.00001 4 16.536 4 32C4 47.464 16.536 60 32 60Z" fill="#FF0000"/>
+<path d="M16.1681 5.9457C18.2621 9.14473 16.1681 8.61155 12.5037 12.3437C8.83918 16.0759 9.62365 18.3858 6.22168 16.0759C3.08069 13.9433 6.74518 10.7443 8.83917 8.61156C10.9332 6.47886 14.5255 3.43618 16.1681 5.9457Z" fill="white"/>
+<path d="M58.0543 16.1681C54.8553 18.2621 55.3884 16.1681 51.6563 12.5037C47.9241 8.83918 45.6142 9.62365 47.9241 6.22168C50.0567 3.08069 53.2557 6.74518 55.3884 8.83917C57.5211 10.9332 60.5638 14.5255 58.0543 16.1681Z" fill="white"/>
+<path d="M47.8319 58.0543C45.7379 54.8553 47.8319 55.3884 51.4963 51.6563C55.1608 47.9241 54.3764 45.6142 57.7783 47.9241C60.9193 50.0567 57.2548 53.2557 55.1608 55.3884C53.0668 57.5211 49.4745 60.5638 47.8319 58.0543Z" fill="white"/>
+<g filter="url(#filter0_b_2_2)">
+<path d="M5.9457 47.8319C9.14473 45.7379 8.61155 47.8319 12.3437 51.4963C16.0759 55.1608 18.3858 54.3764 16.0759 57.7783C13.9433 60.9193 10.7443 57.2548 8.61156 55.1608C6.47886 53.0668 3.43618 49.4745 5.9457 47.8319Z" fill="white" fill-opacity="0.8"/>
+</g>
+</g>
+<defs>
+<filter id="filter0_b_2_2" x="1" y="43" width="20" height="20" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+<feFlood flood-opacity="0" result="BackgroundImageFix"/>
+<feGaussianBlur in="BackgroundImageFix" stdDeviation="2"/>
+<feComposite in2="SourceAlpha" operator="in" result="effect1_backgroundBlur_2_2"/>
+<feBlend mode="normal" in="SourceGraphic" in2="effect1_backgroundBlur_2_2" result="shape"/>
+</filter>
+<clipPath id="clip0_2_2">
+<rect width="64" height="64" fill="white"/>
+</clipPath>
+</defs>
+</svg>
