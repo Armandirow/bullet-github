@@ -154,8 +154,10 @@ const onBulletPressed = (bullet: Bullet) => {
                 getColStart(bullet.column),
                 getRowStart(bullet.row),
                 'duration-500 ease-in-out',
-                bullet.startAnimation ? 'transition-all' : 'transition-none',
-                sightStore.selectedBullet?.id === bullet.id ? GRID_CLASSES.selectedBullet : '',
+                bullet.startAnimation ? 'transition-all animate-bullet-move' : 'transition-none',
+                sightStore.selectedBullet?.id === bullet.id
+                  ? `${GRID_CLASSES.selectedBullet} animate-bullet-bounce`
+                  : '',
                 bullet.isDestroying ? 'animate-destroy' : ''
               ]"
               :style="{

@@ -57,7 +57,7 @@ const getPositionByColumnColor = (color: BulletColor): number => {
   }
 }
 
-const handleArrowClick = (direction: 'left' | 'right' | 'up' | 'down') => {
+const handleArrowClick = async (direction: 'left' | 'right' | 'up' | 'down') => {
   if (!actionStore.actionSelected) {
     notyf?.error({ message: 'No action selected' })
     return
@@ -71,13 +71,13 @@ const handleArrowClick = (direction: 'left' | 'right' | 'up' | 'down') => {
   try {
     switch (actionStore.actionSelected.name) {
       case ActionName.MOVE_LEFT_RIGHT_DOWN_ONE:
-        handleMoveLeftRightDownOne(direction)
+        await handleMoveLeftRightDownOne(direction)
         break
       case ActionName.MOVE_UP_ONE:
-        handleMoveUpOne(direction)
+        await handleMoveUpOne(direction)
         break
       case ActionName.MOVE_DOWN_ANY:
-        handleMoveDownAny(direction)
+        await handleMoveDownAny(direction)
         break
       default:
         notyf?.error({ message: 'This action cannot be used with arrows' })
@@ -87,7 +87,8 @@ const handleArrowClick = (direction: 'left' | 'right' | 'up' | 'down') => {
   }
 }
 
-const handleMoveLeftRightDownOne = (direction: 'left' | 'right' | 'up' | 'down') => {
+const handleMoveLeftRightDownOne = async (direction: 'left' | 'right' | 'up' | 'down') => {
+  const action = actionStore.actionSelected!
   const bullet = sightStore.selectedBullet!
   const currentPosition = getPositionByColumnColor(bullet.column)
 
@@ -95,7 +96,8 @@ const handleMoveLeftRightDownOne = (direction: 'left' | 'right' | 'up' | 'down')
     case 'left':
       if (currentPosition > 1) {
         const newColumn = getColumnColorByPosition(currentPosition - 1)
-        moveBullet(bullet, newColumn, bullet.row)
+        await moveBullet(bullet, newColumn, bullet.row)
+        actionStore.consumeActionPoints(action.apCost)
       } else {
         throw new Error('Cannot move left: already at leftmost column')
       }
@@ -103,14 +105,16 @@ const handleMoveLeftRightDownOne = (direction: 'left' | 'right' | 'up' | 'down')
     case 'right':
       if (currentPosition < 5) {
         const newColumn = getColumnColorByPosition(currentPosition + 1)
-        moveBullet(bullet, newColumn, bullet.row)
+        await moveBullet(bullet, newColumn, bullet.row)
+        actionStore.consumeActionPoints(action.apCost)
       } else {
         throw new Error('Cannot move right: already at rightmost column')
       }
       break
     case 'down':
       if (bullet.row < 7) {
-        moveBullet(bullet, bullet.column, bullet.row + 1)
+        await moveBullet(bullet, bullet.column, bullet.row + 1)
+        actionStore.consumeActionPoints(action.apCost)
       } else {
         throw new Error('Cannot move down: already at bottom row')
       }
@@ -122,15 +126,17 @@ const handleMoveLeftRightDownOne = (direction: 'left' | 'right' | 'up' | 'down')
   actionStore.unselectAction()
 }
 
-const handleMoveUpOne = (direction: 'left' | 'right' | 'up' | 'down') => {
+const handleMoveUpOne = async (direction: 'left' | 'right' | 'up' | 'down') => {
   const bullet = sightStore.selectedBullet!
+  const action = actionStore.actionSelected!
 
   if (direction !== 'up') {
     throw new Error('This action only allows upward movement')
   }
 
   if (bullet.row > 1) {
-    moveBullet(bullet, bullet.column, bullet.row - 1)
+    await moveBullet(bullet, bullet.column, bullet.row - 1)
+    actionStore.consumeActionPoints(action.apCost)
   } else {
     throw new Error('Cannot move up: already at top row')
   }
@@ -138,8 +144,9 @@ const handleMoveUpOne = (direction: 'left' | 'right' | 'up' | 'down') => {
   actionStore.unselectAction()
 }
 
-const handleMoveDownAny = (direction: 'left' | 'right' | 'up' | 'down') => {
+const handleMoveDownAny = async (direction: 'left' | 'right' | 'up' | 'down') => {
   const bullet = sightStore.selectedBullet!
+  const action = actionStore.actionSelected!
 
   if (direction !== 'down') {
     throw new Error('This action only allows downward movement')
@@ -156,7 +163,8 @@ const handleMoveDownAny = (direction: 'left' | 'right' | 'up' | 'down') => {
   }
 
   if (targetRow > bullet.row) {
-    moveBullet(bullet, bullet.column, targetRow)
+    await moveBullet(bullet, bullet.column, targetRow)
+    actionStore.consumeActionPoints(action.apCost)
   } else {
     throw new Error('No available space below the bullet')
   }
@@ -164,24 +172,8 @@ const handleMoveDownAny = (direction: 'left' | 'right' | 'up' | 'down') => {
   actionStore.unselectAction()
 }
 
-const moveBullet = (bullet: Bullet, newColumn: BulletColor, newRow: number) => {
-  // Check if target position is occupied
-  if (sightStore.sightBoard[newColumn][newRow]) {
-    throw new Error('Target position is occupied')
-  }
-
-  // Remove from current position
-  sightStore.sightBoard[bullet.column][bullet.row] = undefined
-
-  // Update bullet position
-  bullet.column = newColumn
-  bullet.row = newRow
-
-  // Place in new position
-  sightStore.sightBoard[newColumn][newRow] = bullet
-
-  // Clear selection
-  sightStore.selectedBullet = undefined
+const moveBullet = async (bullet: Bullet, newColumn: BulletColor, newRow: number) => {
+  await sightStore.moveBulletAnimated(bullet, newColumn, newRow)
 }
 </script>
 

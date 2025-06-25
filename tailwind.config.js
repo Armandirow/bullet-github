@@ -15,6 +15,52 @@ export default {
         yellow: { ...colors.amber, DEFAULT: colors.amber[600] },
         purple: { ...colors.violet, DEFAULT: colors.violet[600] }
       },
+      animation: {
+        destroy: 'destroy 0.5s ease-in-out forwards',
+        'bullet-move': 'bullet-move 0.5s ease-out forwards',
+        'bullet-bounce': 'bullet-bounce 0.3s ease-out'
+      },
+      keyframes: {
+        destroy: {
+          '0%': {
+            transform: 'scale(1) rotate(0deg)',
+            opacity: '1'
+          },
+          '50%': {
+            transform: 'scale(1.2) rotate(180deg)',
+            opacity: '0.8'
+          },
+          '100%': {
+            transform: 'scale(0) rotate(360deg)',
+            opacity: '0'
+          }
+        },
+        'bullet-move': {
+          '0%': {
+            transform: 'scale(1)',
+            filter: 'brightness(1)'
+          },
+          '50%': {
+            transform: 'scale(1.1)',
+            filter: 'brightness(1.2)'
+          },
+          '100%': {
+            transform: 'scale(1)',
+            filter: 'brightness(1)'
+          }
+        },
+        'bullet-bounce': {
+          '0%': {
+            transform: 'scale(1)'
+          },
+          '50%': {
+            transform: 'scale(1.05)'
+          },
+          '100%': {
+            transform: 'scale(1)'
+          }
+        }
+      },
       boxShadow: {
         neon: '0 0 4px #fff,\
         inset 0 0 4px #fff,\

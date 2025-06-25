@@ -72,6 +72,14 @@ export const useSightStore = defineStore('sight', () => {
     return updatedBullet
   }
 
+  const startAnimation = (bullet: Bullet, { left, top }: { left: number; top: number }) => {
+    updateOneBullet(bullet, { startAnimation: true, left, top })
+  }
+
+  const stopAnimation = (bullet: Bullet) => {
+    updateOneBullet(bullet, { startAnimation: false, left: 0, top: 0 })
+  }
+
   const pickOne = async () => {
     if (isFiring.value) {
       throw new Error('Please wait for the current bullet to settle')
@@ -141,6 +149,62 @@ export const useSightStore = defineStore('sight', () => {
       throw new Error(`selected Bullet not found`)
     }
     selectedBullet.value = bullet
+  }
+
+  const moveBulletAnimated = async (bullet: Bullet, newColumn: Color, newRow: number) => {
+    if (isFiring.value) {
+      throw new Error('Please wait for the current bullet to settle')
+    }
+
+    // Check if target position is occupied
+    if (sightBoard.value[newColumn][newRow]) {
+      throw new Error('Target position is occupied')
+    }
+
+    isFiring.value = true
+    try {
+      // Calculate movement offsets
+      const currentPosition = getPositionByColumnColor(bullet.column)
+      const newPosition = getPositionByColumnColor(newColumn)
+      const columnOffset = newPosition - currentPosition
+      const rowOffset = newRow - bullet.row
+
+      // Start animation
+      startAnimation(bullet, { left: columnOffset, top: rowOffset })
+
+      // Wait for animation
+      await new Promise((resolve) => setTimeout(resolve, 500))
+
+      // Remove from current position and update bullet
+      sightBoard.value[bullet.column][bullet.row] = undefined
+      bullet.column = newColumn
+      bullet.row = newRow
+
+      // Place in new position and reset animation
+      stopAnimation(bullet)
+
+      // Clear selection
+      selectedBullet.value = undefined
+    } finally {
+      isFiring.value = false
+    }
+  }
+
+  const getPositionByColumnColor = (color: Color): number => {
+    switch (color) {
+      case Color.RED:
+        return 1
+      case Color.BLUE:
+        return 2
+      case Color.GREEN:
+        return 3
+      case Color.YELLOW:
+        return 4
+      case Color.PURPLE:
+        return 5
+      default:
+        throw new Error('Invalid column color')
+    }
   }
 
   const playPattern = ({
@@ -228,6 +292,9 @@ export const useSightStore = defineStore('sight', () => {
     selectBullet,
     playPattern,
     selectedBullet,
-    isFiring
+    isFiring,
+    moveBulletAnimated,
+    startAnimation,
+    stopAnimation
   }
 })

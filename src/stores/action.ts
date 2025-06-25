@@ -54,6 +54,13 @@ export const useActionStore = defineStore('action', () => {
     }
   }
 
+  const consumeActionPoints = (cost: number) => {
+    if (actionPoints.value < cost) {
+      throw new Error("You don't have the AP needed")
+    }
+    actionPoints.value -= cost
+  }
+
   const initialize = (hero: Heroine) => {
     actions.value = heroinesInformationsMap[hero].actions
     actionSelected.value = undefined
@@ -63,12 +70,14 @@ export const useActionStore = defineStore('action', () => {
   return {
     actions,
     actionSelected,
+    actionPoints,
     simpleActions,
     starActions,
     initialize,
     activateStarActions,
     selectAction,
     unselectAction,
-    playActionSelected
+    playActionSelected,
+    consumeActionPoints
   }
 })
